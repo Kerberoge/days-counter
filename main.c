@@ -136,73 +136,79 @@ int* parseInput (int* argc, char*** argv)
 int main (int argc, char** argv)
 {
 
-	int* user_date = parseInput(&argc, &argv);
+	int user_day, user_month, user_year;
 
-	// get current date
-	int current_date[3];
-	time_t t = time(NULL);
-	struct tm time = *localtime(&t);
-	current_date[0] = time.tm_mday;
-	current_date[1] = time.tm_mon + 1;
-	current_date[2] = time.tm_year + 1900;
+	{
+		int* user_date = parseInput(&argc, &argv);
+		user_day		= user_date[0];
+		user_month		= user_date[1];
+		user_year		= user_date[2];
+	}
 
-	// verify that provided date isn't in the future
-	if ( user_date[2] > current_date[2] ||
-		(user_date[1] > current_date[1] && user_date[2] == current_date[2]) ||
-		(user_date[0] > current_date[0] && user_date[1] == current_date[1] && user_date[2] == current_date[2]) )
+	time_t t			= time(NULL);
+	struct tm time		= *localtime(&t);
+	int current_day		= time.tm_mday;
+	int current_month	= time.tm_mon + 1;
+	int current_year	= time.tm_year + 1900;
+	int amount_of_days	= 0;
+	
+	if ( user_year < current_year )
+	{
+		// count days till end of year in user_date
+		amount_of_days += numberOfDaysInMonth(user_month, user_year) - user_day;
+
+		for (int i = user_month + 1; i <= 12; i++)
+		{
+			amount_of_days += numberOfDaysInMonth(i, user_year);
+		}
+	
+		// count days till end of year before year in current_date
+		for (int i = user_year + 1; i < current_year; i++)
+		{
+			if ( isLeapYear(i) )
+			{
+				amount_of_days += 366;
+			}
+			else
+			{
+				amount_of_days += 365;
+			}
+		}
+
+		// count days till current date
+		for (int i = 1; i < current_month; i++)
+		{
+			amount_of_days += numberOfDaysInMonth(i, current_year);
+		}
+
+		amount_of_days += current_day;
+	}
+	else if ( user_year == current_year && user_month < current_month )
+	{
+		// count days till end of month in user_date
+		amount_of_days += numberOfDaysInMonth(user_month, user_year) - user_day;
+
+		// count days till end of month before month in current_date
+		for (int i = user_month + 1; i < current_month; i++)
+		{
+			amount_of_days += numberOfDaysInMonth(i, user_year);
+		}
+
+		// count days till current_date
+		amount_of_days += current_day;
+	}
+	else if ( user_year == current_year && user_month == current_month && user_day <= current_day )
+	{
+		// count days between user_date and current_date
+		amount_of_days += current_day - user_day;
+	}
+	else
 	{
 		fprintf(stderr, "Error: date is in the future\n");
 		exit(1);
 	}
 
-	int amount_of_days = 0;
-
-	// count days till the same date in the year in current_date
-	for (int i = user_date[2]; i < current_date[2]; i++)
-	{
-		if ( isLeapYear(i) )
-		{
-			amount_of_days += 366;
-		}
-		else
-		{
-			amount_of_days += 365;
-		}
-	}
-
-	// add to or subtract from amount_of_days till the date in current_date is reached
-	if ( user_date[1] < current_date[1] )
-	{
-		amount_of_days += numberOfDaysInMonth(user_date[1], current_date[2]) - user_date[0];
-
-		for (int i = user_date[1] + 1; i < current_date[1]; i++)
-		{
-			amount_of_days += numberOfDaysInMonth(i, current_date[2]);
-		}
-
-		amount_of_days += current_date[0];
-	}
-	else if	( user_date[0] < current_date[0] && user_date[1] == current_date[1] )
-	{
-		amount_of_days += current_date[0] - user_date[0];
-	}
-	else if ( user_date[1] > current_date[1] )
-	{
-		amount_of_days -= user_date[0];
-
-		for (int i = user_date[1] - 1; i > current_date[1]; i--)
-		{
-			amount_of_days -= numberOfDaysInMonth(i, current_date[2]);
-		}
-
-		amount_of_days -= numberOfDaysInMonth(current_date[1], current_date[2]) - current_date[0];
-	}
-	else if ( user_date[0] > current_date[0] && user_date[1] == current_date[1] )
-	{
-		amount_of_days -= user_date[0] - current_date[0];
-	}
-
-	printf("Number of days that have passed since %02d-%02d-%04d: %d\n", user_date[0], user_date[1], user_date[2], amount_of_days);
+	printf("Number of days that have passed since %02d-%02d-%04d: %d\n", user_day, user_month, user_year, amount_of_days);
 
 	return 0;
 }
